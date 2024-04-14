@@ -41,6 +41,54 @@ const commands = [
     ],
   },
   {
+    name: 'cast-vote',
+    description: 'Cast a vote for a candidate',
+    options: [
+      {
+        name: 'email_address',
+        type: 3,
+        description: 'Your email address',
+        required: true,
+      },
+      {
+        name: 'election_id',
+        type: 3,
+        description: 'The ID of the election',
+        required: true,
+      },
+      {
+        name: 'candidate_id',
+        type: 3,
+        description: 'The ID of the candidate',
+        required: true,
+      },
+    ],
+  },
+  {
+    name: 'register-candidate',
+    description: 'Register as a candidate',
+    options: [
+      {
+        name: 'email_address',
+        type: 3,
+        description: 'Your email address',
+        required: true,
+      },
+      {
+        name: 'election_id',
+        type: 3,
+        description: 'The ID of the election',
+        required: true,
+      },
+      {
+        name: 'candidate_name',
+        type: 3,
+        description: 'Your name',
+        required: true,
+      },
+    ],
+  },
+  {
     name: 'help',
     description: 'Help command'
   }
@@ -88,7 +136,6 @@ client.on('interactionCreate', async interaction => {
 
     if (election) {
       await interaction.reply(`\n\n
-
         ***Election Details***
         **Election ID:** ${election.electionId}
         **Election Name:** ${election.electionName}
@@ -111,6 +158,46 @@ client.on('interactionCreate', async interaction => {
     } else {
       await interaction.reply('No candidates found for this election');
     }
+  } else if (commandName === 'cast-vote') {
+    const userId = interaction.member.user.id;
+    const email = interaction.options.getString('email_address');
+    const electionId = interaction.options.getString('election_id');
+    const candidateId = interaction.options.getString('candidate_id');
+
+    const votedTopicId = process.env.VOTED_TOPIC_ID;
+    const client = environmentSetup();
+
+    createMessageInTopic(votedTopicId, {
+      "type": "voted",
+      "electionId": electionId,
+      "candidateId": candidateId,
+      "voterId": userId,
+      "email": email,
+      "origin": "discord",
+      "timestamp": new Date().getSeconds(),
+      'txnHash': null,
+      'contractId': null,
+    }, client);
+  } else if (commandName === 'register-candidate') {
+    const userId = interaction.member.user.id;
+    const email = interaction.options.getString('email_address');
+    const electionId = interaction.options.getString('election_id');
+    const candidateName = interaction.options.getString('candidate_name');
+
+    const candidateAddedTopicId = process.env.CANDIDATE_ADDED_TOPIC_ID;
+    const client = environmentSetup();
+
+    createMessageInTopic(candidateAddedTopicId, {
+      "type": "candidateAdded",
+      "electionId": electionId,
+      "candidateId": userId,
+      "candidateName": candidateName,
+      "email": email,
+      "origin": "discord",
+      "timestamp": new Date().getSeconds(),
+      'txnHash': null,
+      'contractId': null,
+    }, client);
   } else if (commandName === 'help') {
     await interaction.reply(`\n\n
       ***Commands***
@@ -119,6 +206,8 @@ client.on('interactionCreate', async interaction => {
       **/view-past-elections** - View past elections
       **/view-election-details** - View details of an election
       **/view-candidates** - View candidates for an election
+      **/cast-vote** - Cast a vote for a candidate
+      **/register-candidate** - Register as a candidate
       **/help** - Help command
     `);
   } else {
