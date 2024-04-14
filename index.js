@@ -1,9 +1,12 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
+import { Client, GatewayIntentBits } from "discord.js";
+import { environmentSetup } from "./setup_client.js";
+import { REST } from "@discordjs/rest";
+import { Routes } from "discord-api-types/v9";
+import axios from "axios";
+import "dotenv/config";
+import { createMessageInTopic } from "./topic.js";
+
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-const axios = require('axios');
-require('dotenv').config();
 
 const commands = [
   {
@@ -132,17 +135,17 @@ client.on('interactionCreate', async interaction => {
     const endedElectionIds = (await getEndedElections()).map((election) => election.electionId);
     const isEnded = endedElectionIds.includes(electionId);
     const electionCandidates = await getCandidates(electionId);
-    const electionCandidatesNames = electionCandidates.map((candidate) => candidate.candidateName.replaceAll('\'', ''));
+    const electionCandidatesNames = electionCandidates.map((candidate) => `\t\t\tID: ${candidate.candidateId} | Name: ${candidate.candidateName.replaceAll('\'', '')}`);
 
     if (election) {
-      await interaction.reply(`\n\n
-        ***Election Details***
-        **Election ID:** ${election.electionId}
-        **Election Name:** ${election.electionName}
-        **Candidates:** ${(electionCandidatesNames.length > 0) ? electionCandidatesNames.join(", ") : "No candidates"}
-        **Timestamp:** ${isEnded ? "Winner announced at " : "Started at "}  ${election.timestamp}
-        **Ended:** ${isEnded}
-        **Winner:** ${isEnded ? election.winnerName : "Election is ongoing"}`
+      await interaction.reply(`-->
+      ***Election Details***
+      **Election ID:** ${election.electionId}
+      **Election Name:** ${election.electionName}
+      **Candidates:** ${(electionCandidatesNames.length > 0) ? "\n" + electionCandidatesNames.join("\n") : "No candidates"}
+      **Timestamp:** ${isEnded ? "Winner announced at " : "Started at "}  ${election.timestamp}
+      **Ended:** ${isEnded}
+      **Winner:** ${isEnded ? election.winnerName : "Election is ongoing"}`
       );
     } else {
       await interaction.reply(`Election with ID ${electionId} not found`);
@@ -152,9 +155,11 @@ client.on('interactionCreate', async interaction => {
     const candidates = await getCandidates(electionId);
     if (candidates.length > 0) {
       const candidateList = candidates.map((candidate) => {
-        return candidate.candidateName.replaceAll('\'', '');
+        return `ID: ${candidate.candidateId}, Name: ${candidate.candidateName}`
       });
-      await interaction.reply(candidateList.join('\n'));
+      await interaction.reply(`-->
+      \t${candidateList.join('\n\t\t')}`
+      );
     } else {
       await interaction.reply('No candidates found for this election');
     }
@@ -178,6 +183,7 @@ client.on('interactionCreate', async interaction => {
       'txnHash': null,
       'contractId': null,
     }, client);
+    await interaction.reply('Vote casted successfully');
   } else if (commandName === 'register-candidate') {
     const userId = interaction.member.user.id;
     const email = interaction.options.getString('email_address');
@@ -198,9 +204,10 @@ client.on('interactionCreate', async interaction => {
       'txnHash': null,
       'contractId': null,
     }, client);
+    await interaction.reply('Candidate registered successfully');
   } else if (commandName === 'help') {
-    await interaction.reply(`\n\n
-      ***Commands***
+    await interaction.reply(`-->
+      \n***Commands***
       **/hello** - Replies with Hello!
       **/view-ongoing-elections** - View ongoing elections
       **/view-past-elections** - View past elections
